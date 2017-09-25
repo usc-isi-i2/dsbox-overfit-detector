@@ -19,7 +19,6 @@ preprocessed through the pipeline. That is, the data is the same as you used to 
 this class will assume it is already pre-processed
 """
 
-from dsbox.overfitdetector.util.utilities import Utilities
 import pandas
 import numpy as np
 from scipy.stats import chi2_contingency, normaltest
@@ -374,7 +373,7 @@ class Detector(SupervisedLearnerPrimitiveBase[Input, Output, Params]):
 
                 matches = training_data
                 for (col, val) in zip(col_set, vals_for_col_set):
-                    if Utilities.is_number(val):
+                    if self.is_number(val):
                         lower_bound = float(val) * (1.0 - real_value_extend)
                         upper_bound = float(val)*(1.0 + real_value_extend)
                         matches = matches[matches[col] >= lower_bound]
@@ -503,3 +502,15 @@ class Detector(SupervisedLearnerPrimitiveBase[Input, Output, Params]):
             distribution.append((colval, float(counts[colval]) / total))
 
         return distribution
+
+    def csv_to_dataframe(self, path_to_csv):
+        data = pandas.read_csv(path_to_csv)  # all read as str
+        return data
+
+    def is_number(self, s):
+        # type: (number) -> number
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
