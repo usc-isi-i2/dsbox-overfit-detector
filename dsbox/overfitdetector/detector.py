@@ -73,7 +73,12 @@ class Detector(SupervisedLearnerPrimitiveBase[Input, Output, Params]):
     def fit(self, *, timeout: float = None, iterations: int = None):
         if iterations is not None:
             self.n_sample_iterations = iterations
-        self.confidence = self.produce(inputs=self.training_inputs, iterations=iterations)
+
+        if not self.fitted:
+            self.confidence = self.produce(inputs=self.training_inputs, iterations=iterations)
+        else:
+            self.__logger.debug("Already self.fitted so using prev confidence")
+
         self.fitted = True
 
     def get_confidence(self):
