@@ -42,7 +42,7 @@ class Detector(SupervisedLearnerPrimitiveBase[Input, Output, Params]):
     def __init__(self, *, n_sample_instances: int = 500, n_sample_iterations: int = 100, columns: list = list(),
                  model: SupervisedLearnerPrimitiveBase = None) -> None:
         super().__init__()
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.DEBUG)
         self.__logger = logging.getLogger(__name__)
         self.n_sample_iterations = n_sample_iterations
         self.n_sample_instances = n_sample_instances
@@ -373,19 +373,33 @@ class Detector(SupervisedLearnerPrimitiveBase[Input, Output, Params]):
 
                 matches = training_data
                 for (col, val) in zip(col_set, vals_for_col_set):
+                    tmp_matches = []
                     if self.is_number(val):
-                        lower_bound = float(val) * (1.0 - real_value_extend)
-                        upper_bound = float(val)*(1.0 + real_value_extend)
-                        matches = matches[matches[col] >= lower_bound]
-                        matches = matches[matches[col] <= upper_bound]
+                        if isinstance(val, float):
+                            lower_bound = float(val) * (1.0 - real_value_extend)
+                            upper_bound = float(val) * (1.0 + real_value_extend)
+                            tmp_matches_lwr = matches[matches[col] >= lower_bound]
+                            tmp_matches_upr = matches[matches[col] <= upper_bound]
+                            tmp_matches = pandas.concat([tmp_matches_lwr, tmp_matches_upr])
+                        else:
+                            tmp_matches = matches[matches[col] == val]
                     else:
                         if val.isalnum():
-                            matches = matches[matches[col] == '%s' % val]
+                            tmp_matches = matches[matches[col] == '%s' % val]
                         else:
-                            matches = matches[matches[col] == val]
+                            tmp_matches = matches[matches[col] == val]
 
-                self.__logger.debug("Dataframe query: %s found %d matches." % (qry_string, len(matches)))
+                    if len(tmp_matches) > 0:  # do the conjunction, but only as long as we have some data...
+                        matches = tmp_matches
+                    else:
+                        break
+
+                    self.__logger.debug("Dataframe query: (%s, %s) found %d matches." % (col, str(val), len(matches)))
+                    #print("Dataframe query: (%s, %s) found %d matches." % (col, str(val), len(matches)))
+
                 if len(matches) > 0:
+                    self.__logger.debug("Col set yielded %d matches total" % (len(matches)))
+                    #print("Col set yielded %d matches total" % (len(matches)))
                     all_matches = all_matches.append(matches)
 
             if len(all_matches) > 0:

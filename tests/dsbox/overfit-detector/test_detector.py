@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from dsbox.overfitdetector.detector import Detector
 from sklearn.linear_model import LogisticRegression
+from sklearn import preprocessing
 import logging
 import math
 
@@ -13,7 +14,10 @@ class Detectorests(unittest.TestCase):
     def setUp(self):
         self.__detector = Detector()
         self.__dir_path = os.getcwd()
-        self.__detector.set_logger(logging.ERROR)
+        logging.basicConfig(level=logging.DEBUG)
+
+        self.__train_data_file = self.__dir_path+"/tests/dsbox/overfit-detector/test_data/trainData.csv.gz"
+        self.__train_labels_file = self.__dir_path+"/tests/dsbox/overfit-detector/test_data/trainTargets.csv.gz"
 
         datas = {
             "indep1": [],
@@ -48,15 +52,28 @@ class Detectorests(unittest.TestCase):
         self.__test_df = pd.DataFrame(datas)
 
     def test_detector(self):
-        data = np.array([1., 2., 3., 4.])
-        labels = np.array(1)
-        for i in range(10):
-            data = np.vstack([data, [1., 2., 3., 4.]])
-            labels = np.append(labels, 1)
-        for i in range(10):
-            data = np.vstack([data, [2., 3., 4., 5.]])
-            labels = np.append(labels, 0)
 
+        #data = np.array([1., 2., 3., 4.])
+        #labels = np.array(1)
+        #for i in range(10):
+        #    data = np.vstack([data, [1., 2., 3., 4.]])
+        #    labels = np.append(labels, 1)
+        #for i in range(10):
+        #    data = np.vstack([data, [2., 3., 4., 5.]])
+        #    labels = np.append(labels, 0)
+
+        data = pd.read_csv(self.__train_data_file, header=0).fillna(0.0).replace('', '0')
+        del data['d3mIndex']
+        labels = pd.read_csv(self.__train_labels_file, header=0).fillna(0.0).replace('', '0')['Hall_of_Fame']
+
+        # Encode the categorical data in training data
+        # Encode the categorical data in the test targets, uses the first target of the dataset as a target
+        trainDataLabelEncoders = dict()
+        for col in ['Player', 'Position']:
+            trainDataLabelEncoders[col] = preprocessing.LabelEncoder().fit(data[col])
+            data[col] = trainDataLabelEncoders[col].transform(data[col])
+
+        # Train the model
         mdl = LogisticRegression().fit(data, labels)
         dd = Detector(n_sample_instances=10, n_sample_iterations=20, columns=['0', '1', '2', '3'], model=mdl)
         dd.set_training_data(inputs=data, outputs=labels)
